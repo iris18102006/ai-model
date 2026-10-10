@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ai-model · tiny GPT in your browser</title>
+<style>
+  :root { --bg:#0b0b10; --card:#14141c; --fg:#e8e6f0; --mut:#8b88a0; --acc:#b388ff; --line:#262633; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  main { max-width:760px; margin:0 auto; padding:32px 16px 64px; }
+  h1 { font-size:22px; margin:0 0 4px; } h1 span { color:var(--acc); }
+  p.sub { color:var(--mut); margin:0 0 24px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  textarea { width:100%; min-height:70px; background:#0f0f16; color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; resize:vertical; }
+  .row { display:flex; flex-wrap:wrap; gap:16px; margin:12px 0; }
+  label { display:flex; flex-direction:column; gap:4px; color:var(--mut); font-size:13px; flex:1 1 180px; }
+  label b { color:var(--fg); font-weight:normal; }
+  input[type=range] { accent-color:var(--acc); }
+  button { background:var(--acc); color:#12071f; border:0; border-radius:8px; padding:10px 18px; font:inherit; font-weight:bold; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--fg); border:1px solid var(--line); margin-left:8px; }
+  button:disabled { opacity:.5; cursor:default; }
+  #out { white-space:pre-wrap; min-height:180px; }
+  #status { color:var(--mut); font-size:13px; margin-top:8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ai-<span>model</span></h1>
+  <p class="sub">0.8M-param GPT, trained from scratch on tiny shakespeare, running in your browser.</p>
+
+  <div class="card">
+    <textarea id="prompt">ROMEO:</textarea>
+    <div class="row">
+      <label>temperature <b id="tv">0.8</b><input id="temp" type="range" min="0.2" max="1.5" step="0.05" value="0.8"></label>
+      <label>top-k <b id="kv">40</b><input id="topk" type="range" min="1" max="65" step="1" value="40"></label>
+      <label>length <b id="lv">400</b><input id="len" type="range" min="50" max="2000" step="50" value="400"></label>
+    </div>
+    <button id="go" disabled>generate</button><button id="stop" class="ghost" disabled>stop</button>
+    <div id="status">loading model…</div>
+  </div>
+
+  <div class="card"><div id="out"></div></div>
+</main>
+
+<script src="gpt.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let model = null, stopFlag = false;
+
+for (const [id, label] of [["temp","tv"],["topk","kv"],["len","lv"]])
+  $(id).oninput = () => $(label).textContent = $(id).value;
+
+async function load() {
+  try {
+    const [meta, bin] = await Promise.all([
+      fetch("model.json").then(r => r.json()),
+      fetch("model.bin").then(r => r.arrayBuffer()),
+    ]);
+    model = new TinyGPT(meta, bin);
+    $("status").textContent = `ready · ${(bin.byteLength / 4 / 1e6).toFixed(2)}M params · vocab ${meta.chars.length}`;
+    $("go").disabled = false;
+  } catch (e) {
+    $("status").textContent = "couldn't load model.json / model.bin — run `python -m ai_model.export` and serve this folder (python3 -m http.server)";
+  }
+}
+
+$("go").onclick = async () => {
+  stopFlag = false; $("go").disabled = true; $("stop").disabled = false;
+  const prompt = $("prompt").value, out = $("out");
+  out.textContent = prompt;
+  const t0 = performance.now(); let n = 0;
+  const gen = model.generate(prompt, +$("len").value, +$("temp").value, +$("topk").value);
+  for (const ch of gen) {
+    out.textContent += ch; n++;
+    if (stopFlag) break;
+    if (n % 4 === 0) await new Promise(r => setTimeout(r)); // let the UI paint
+  }
+  const s = (performance.now() - t0) / 1000;
+  $("status").textContent = `${n} chars in ${s.toFixed(1)}s (${(n / s).toFixed(0)} chars/s)`;
+  $("go").disabled = false; $("stop").disabled = true;
+};
+$("stop").onclick = () => stopFlag = true;
+load();
+</script>
+</body>
+</html>

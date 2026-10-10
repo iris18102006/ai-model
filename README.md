@@ -12,6 +12,16 @@ python -m ai_model.train --steps 3000
 python -m ai_model.generate --prompt "ROMEO:"
 ```
 
+## Browser demo
+
+```bash
+pip install numpy   # optional, silences a torch warning
+python -m ai_model.export       # writes web/model.bin + web/model.json
+cd web && python3 -m http.server 8000
+```
+
+Open http://localhost:8000. Inference is pure JS (`web/gpt.js`, no deps, KV cache).
+
 Low on RAM/CPU? Try `--embd 64 --layers 2 --batch 16 --threads 2`.
 
 ## Roadmap
@@ -19,6 +29,6 @@ Low on RAM/CPU? Try `--embd 64 --layers 2 --batch 16 --threads 2`.
 - [x] Model (attention, MLP, blocks, weight tying)
 - [x] Training loop + checkpoints
 - [x] Sampling script
-- [ ] Export weights for the browser
-- [ ] Browser demo
+- [x] Export weights for the browser
+- [x] Browser demo
 - [ ] Train on a custom dataset
