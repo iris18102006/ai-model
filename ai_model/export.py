@@ -32,7 +32,7 @@ def main():
     (out / "model.json").write_text(
         json.dumps({"config": ck["config"], "chars": ck["chars"], "tensors": manifest})
     )
-    print(f"wrote {out}/model.bin ({len(buf) / 1e6:.2f} MB) and {out}/model.json")
+    print(f"wrote {out}/model.bin ({len(buf) / 1e6:.2f} MB) and {out}/model.json") 
 
 
 if __name__ == "__main__":
