@@ -117,4 +117,4 @@ class GPT(nn.Module):
         return idx
 
     def num_params(self):
-        return sum(p.numel() for p in self.parameters())
+        return sum(p.numel() for p in self.parameters()) 
